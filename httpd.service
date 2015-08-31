@@ -10,7 +10,6 @@ ExecStart=@EXEC@ $OPTIONS -k start
 ExecReload=@EXEC@ $OPTIONS -t
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStop=@EXEC@ $OPTIONS -k stop
-PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

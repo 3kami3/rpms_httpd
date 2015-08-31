@@ -1,18 +1,12 @@
 # Configuration file for the httpd service.
 
 #
-# Note: With previous versions of httpd, the MPM could be changed by
-# editing an "HTTPD" variable here.  With the current version, that
-# variable is now ignored.  A particular systemd service must be
-# chosen corresponding to the desired MPM:
+# The default processing model (MPM) is the process-based
+# 'prefork' model.  A thread-based model, 'worker', is also
+# available, but does not work with some modules (such as PHP).
+# The service must be stopped before changing this variable.
 #
-#   httpd.service         => prefork MPM
-#   httpd-worker.service  => worker MPM
-#   httpd-event.service   => event MPM
-#
-# Use systemctl to stop/start between MPMs, and to disable/enable
-# whichever service is required to start at boot time.
-#
+#HTTPD=/usr/sbin/httpd.worker
 
 #
 # To pass additional options (for instance, -D definitions) to the
@@ -21,7 +15,24 @@
 #OPTIONS=
 
 #
-# This setting ensures the httpd process is started in the "C" 
-# locale by default:
+# By default, the httpd process is started in the C locale; to 
+# change the locale in which the server runs, the HTTPD_LANG
+# variable can be set.
 #
-LANG=C
+#HTTPD_LANG=C
+
+#
+# When stopping the server a 10 second timeout is allowed before
+# forcibly terminating the parent process (with a SIGKILL signal).
+# To allow a longer delay, set the STOP_TIMEOUT variable.
+#
+#STOP_TIMEOUT=10
+
+#
+# By default, the httpd process will create the file
+# /var/run/httpd/httpd.pid in which it records its process
+# identification number when it starts.  If an alternate location is
+# specified in httpd.conf (via the PidFile directive), the new
+# location needs to be reported in the PIDFILE.
+#
+#PIDFILE=/var/run/httpd/httpd.pid

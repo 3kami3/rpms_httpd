@@ -4,7 +4,6 @@
 %define mmnisa %{mmn}-%{__isa_name}-%{__isa_bits}
 %define vstring Fedora
 %define mpms worker event
-%define all_services httpd.service httpd-worker.service httpd-event.service
 
 Summary: Apache HTTP Server
 Name: httpd
@@ -14,6 +13,7 @@ URL: http://httpd.apache.org/
 Source0: http://www.apache.org/dist/httpd/httpd-%{version}.tar.bz2
 Source1: index.html
 Source3: httpd.logrotate
+Source4: httpd.init
 Source5: httpd.sysconf
 Source6: httpd-ssl-pass-dialog
 Source10: httpd.conf
@@ -46,16 +46,14 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: autoconf, perl, pkgconfig, findutils, xmlto
 BuildRequires: zlib-devel, libselinux-devel
 BuildRequires: apr-devel >= 1.2.0, apr-util-devel >= 1.2.0, pcre-devel >= 5.0
-Requires: /etc/mime.types, system-logos >= 7.92.1-1
+Requires: initscripts >= 8.36, /etc/mime.types, system-logos >= 7.92.1-1
 Obsoletes: httpd-suexec
+Requires(pre): /usr/sbin/useradd
+Requires(post): chkconfig
 Provides: webserver
 Provides: mod_dav = %{version}-%{release}, httpd-suexec = %{version}-%{release}
 Provides: httpd-mmn = %{mmn}, httpd-mmn = %{mmnisa}
-Requires: httpd-tools = %{version}-%{release}, apr-util-ldap
-Requires(pre): /usr/sbin/useradd
-Requires(preun): systemd-units
-Requires(postun): systemd-units
-Requires(post): systemd-units
+Requires: httpd-tools = %{version}-%{release}, apr-util-ldap, systemd-units
 
 %description
 The Apache HTTP Server is a powerful, efficient, and extensible
@@ -321,6 +319,11 @@ ln -s ../..%{_localstatedir}/log/httpd $RPM_BUILD_ROOT/etc/httpd/logs
 ln -s ../..%{_localstatedir}/run/httpd $RPM_BUILD_ROOT/etc/httpd/run
 ln -s ../..%{_libdir}/httpd/modules $RPM_BUILD_ROOT/etc/httpd/modules
 
+# install SYSV init stuff
+mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
+install -m755 $RPM_SOURCE_DIR/httpd.init \
+	$RPM_BUILD_ROOT/etc/rc.d/init.d/httpd
+
 # install http-ssl-pass-dialog
 mkdir -p $RPM_BUILD_ROOT/%{_libexecdir}
 install -m755 $RPM_SOURCE_DIR/httpd-ssl-pass-dialog \
@@ -375,34 +378,16 @@ mv $RPM_BUILD_ROOT%{_mandir}/man8/apxs.8 $RPM_BUILD_ROOT%{_mandir}/man1/apxs.1
 
 %post
 # Register the httpd service
-if [ $1 -eq 1 ] ; then 
-    # Initial installation 
-    /bin/systemctl daemon-reload >/dev/null 2>&1 || :
-fi
+/sbin/chkconfig --add httpd
 
 %preun
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable %{all_services} > /dev/null 2>&1 || :
-    /bin/systemctl stop %{all_services} > /dev/null 2>&1 || :
+if [ $1 = 0 ]; then
+	/sbin/service httpd stop > /dev/null 2>&1
+	/sbin/chkconfig --del httpd
 fi
 
-%postun
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
-
-# Trigger for conversion from SysV, per guidelines at:
-# https://fedoraproject.org/wiki/Packaging:ScriptletSnippets#Systemd
-%triggerun -- httpd < 2.2.21-5
-# Save the current service runlevel info
-# User must manually run systemd-sysv-convert --apply httpd
-# to migrate them to systemd targets
-/usr/bin/systemd-sysv-convert --save httpd.service >/dev/null 2>&1 ||:
-
-# Run these because the SysV package being removed won't do them
-/sbin/chkconfig --del httpd >/dev/null 2>&1 || :
-
 %posttrans
-/bin/systemctl try-restart %{all_services} >/dev/null 2>&1 || :
+/sbin/service httpd condrestart >/dev/null 2>&1 || :
 
 %define sslcert %{_sysconfdir}/pki/tls/certs/localhost.crt
 %define sslkey %{_sysconfdir}/pki/tls/private/localhost.key
@@ -410,17 +395,16 @@ fi
 %post -n mod_ssl
 umask 077
 
-if [ -f %{sslkey} -o -f %{sslcert} ]; then
-   exit 0
-fi
-
+if [ ! -f %{sslkey} ] ; then
 %{_bindir}/openssl genrsa -rand /proc/apm:/proc/cpuinfo:/proc/dma:/proc/filesystems:/proc/interrupts:/proc/ioports:/proc/pci:/proc/rtc:/proc/uptime 1024 > %{sslkey} 2> /dev/null
+fi
 
 FQDN=`hostname`
 if [ "x${FQDN}" = "x" ]; then
    FQDN=localhost.localdomain
 fi
 
+if [ ! -f %{sslcert} ] ; then
 cat << EOF | %{_bindir}/openssl req -new -key %{sslkey} \
          -x509 -days 365 -set_serial $RANDOM -extensions v3_req \
          -out %{sslcert} 2>/dev/null
@@ -432,6 +416,7 @@ SomeOrganizationalUnit
 ${FQDN}
 root@${FQDN}
 EOF
+fi
 
 %check
 # Check the built modules are all PIC
@@ -468,6 +453,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/httpd/conf/magic
 
 %config(noreplace) %{_sysconfdir}/logrotate.d/httpd
+%{_sysconfdir}/rc.d/init.d/httpd
 
 %dir %{_sysconfdir}/httpd/conf.d
 %{_sysconfdir}/httpd/conf.d/README
