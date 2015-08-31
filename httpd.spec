@@ -7,7 +7,7 @@
 
 Summary: Apache HTTP Server
 Name: httpd
-Version: 2.2.23
+Version: 2.2.31
 Release: 1%{?dist}
 URL: http://httpd.apache.org/
 Source0: http://www.apache.org/dist/httpd/httpd-%{version}.tar.bz2
@@ -37,7 +37,7 @@ Patch24: httpd-2.2.11-corelimit.patch
 Patch25: httpd-2.2.11-selinux.patch
 Patch26: httpd-2.2.9-suenable.patch
 Patch27: httpd-2.2.19-logresolve-ipv6.patch
-Patch28: httpd-2.2.21-mod_proxy-change-state.patch
+Patch28: httpd-2.2.31-mod_proxy-change-state.patch
 License: ASL 2.0
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -500,6 +500,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_sysconfdir}/rpm/macros.httpd
 
 %changelog
+* Tue Sep  1 2015 Koichiro Mikami <github@yumimix.org> - 2.2.31-1
+- update to 2.2.31
+
 * Tue Jan 29 2013 Jan Kaluza <jkaluza@redhat.com> - 2.2.23-1
 - update to 2.2.23
 

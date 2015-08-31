@@ -1,8 +1,8 @@
 diff --git a/modules/proxy/mod_proxy.c b/modules/proxy/mod_proxy.c
-index 1efe95c..5276cac 100644
+index b5e7fee..e37d9ff 100644
 --- a/modules/proxy/mod_proxy.c
 +++ b/modules/proxy/mod_proxy.c
-@@ -2242,14 +2242,7 @@ static int proxy_status_hook(request_rec *r, int flags)
+@@ -2248,14 +2248,7 @@ static int proxy_status_hook(request_rec *r, int flags)
              char fbuf[50];
              ap_rvputs(r, "<tr>\n<td>", worker->scheme, "</td>", NULL);
              ap_rvputs(r, "<td>", worker->hostname, "</td><td>", NULL);
@@ -19,10 +19,10 @@ index 1efe95c..5276cac 100644
              ap_rvputs(r, "</td><td>", worker->s->redirect, NULL);
              ap_rprintf(r, "</td><td>%d</td>", worker->s->lbfactor);
 diff --git a/modules/proxy/mod_proxy.h b/modules/proxy/mod_proxy.h
-index 4a4bf17..1b4ba6d 100644
+index 84a6c1a..ec20451 100644
 --- a/modules/proxy/mod_proxy.h
 +++ b/modules/proxy/mod_proxy.h
-@@ -274,6 +274,16 @@ struct proxy_conn_pool {
+@@ -275,6 +275,16 @@ struct proxy_conn_pool {
  #define PROXY_WORKER_IN_ERROR       0x0080
  #define PROXY_WORKER_HOT_STANDBY    0x0100
  
@@ -39,7 +39,7 @@ index 4a4bf17..1b4ba6d 100644
  #define PROXY_WORKER_NOT_USABLE_BITMAP ( PROXY_WORKER_IN_SHUTDOWN | \
  PROXY_WORKER_DISABLED | PROXY_WORKER_STOPPED | PROXY_WORKER_IN_ERROR )
  
-@@ -776,6 +786,23 @@ PROXY_DECLARE(apr_status_t)
+@@ -786,6 +796,23 @@ PROXY_DECLARE(apr_status_t)
  ap_proxy_buckets_lifetime_transform(request_rec *r, apr_bucket_brigade *from,
                                          apr_bucket_brigade *to);
  
@@ -60,14 +60,14 @@ index 4a4bf17..1b4ba6d 100644
 + */
 +PROXY_DECLARE(char *) ap_proxy_parse_wstatus(apr_pool_t *p, proxy_worker *w);
 +
- #define PROXY_LBMETHOD "proxylbmethod"
- 
- /* The number of dynamic workers that can be added when reconfiguring.
+ #if PROXY_HAS_SCOREBOARD
+ PROXY_DECLARE(void*) ap_proxy_set_scoreboard_lb(proxy_worker *worker,
+                                                 proxy_balancer *balancer,
 diff --git a/modules/proxy/mod_proxy_balancer.c b/modules/proxy/mod_proxy_balancer.c
-index 90f3d08..e58503f 100644
+index ef7ebbc..3883bce 100644
 --- a/modules/proxy/mod_proxy_balancer.c
 +++ b/modules/proxy/mod_proxy_balancer.c
-@@ -675,6 +675,18 @@ static int balancer_init(apr_pool_t *p, apr_pool_t *plog,
+@@ -695,6 +695,18 @@ static int balancer_init(apr_pool_t *p, apr_pool_t *plog,
      return OK;
  }
  
@@ -86,7 +86,7 @@ index 90f3d08..e58503f 100644
  /* Manages the loadfactors and member status
   */
  static int balancer_handler(request_rec *r)
-@@ -770,11 +782,17 @@ static int balancer_handler(request_rec *r)
+@@ -790,11 +802,17 @@ static int balancer_handler(request_rec *r)
              else
                  *wsel->s->redirect = '\0';
          }
@@ -109,7 +109,7 @@ index 90f3d08..e58503f 100644
          }
          if ((val = apr_table_get(params, "ls"))) {
              int ival = atoi(val);
-@@ -784,10 +802,11 @@ static int balancer_handler(request_rec *r)
+@@ -804,10 +822,11 @@ static int balancer_handler(request_rec *r)
          }
  
      }
@@ -123,7 +123,7 @@ index 90f3d08..e58503f 100644
          ap_rputs("  <httpd:balancers>\n", r);
          balancer = (proxy_balancer *)conf->balancers->elts;
          for (i = 0; i < conf->balancers->nelts; i++) {
-@@ -865,18 +884,7 @@ static int balancer_handler(request_rec *r)
+@@ -887,18 +906,7 @@ static int balancer_handler(request_rec *r)
                            ap_escape_html(r->pool, worker->s->redirect), NULL);
                  ap_rprintf(r, "</td><td>%d</td>", worker->s->lbfactor);
                  ap_rprintf(r, "<td>%d</td><td>", worker->s->lbset);
@@ -143,7 +143,7 @@ index 90f3d08..e58503f 100644
                  ap_rputs("</td>", r);
                  ap_rprintf(r, "<td>%" APR_SIZE_T_FMT "</td><td>", worker->s->elected);
                  ap_rputs(apr_strfsize(worker->s->transferred, fbuf), r);
-@@ -907,21 +915,20 @@ static int balancer_handler(request_rec *r)
+@@ -929,21 +937,20 @@ static int balancer_handler(request_rec *r)
              ap_rvputs(r, "value=\"", ap_escape_html(r->pool, wsel->s->redirect),
                        NULL);
              ap_rputs("\"></td></tr>\n", r);
@@ -180,10 +180,10 @@ index 90f3d08..e58503f 100644
              ap_rputs("<hr />\n", r);
          }
 diff --git a/modules/proxy/proxy_util.c b/modules/proxy/proxy_util.c
-index 95f4a78..58f630b 100644
+index 584c21d..cc429e4 100644
 --- a/modules/proxy/proxy_util.c
 +++ b/modules/proxy/proxy_util.c
-@@ -2678,3 +2678,69 @@ ap_proxy_buckets_lifetime_transform(request_rec *r, apr_bucket_brigade *from,
+@@ -2797,3 +2797,69 @@ ap_proxy_buckets_lifetime_transform(request_rec *r, apr_bucket_brigade *from,
      }
      return rv;
  }
