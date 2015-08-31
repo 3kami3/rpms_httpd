@@ -20,7 +20,6 @@ Source10: httpd.conf
 Source11: ssl.conf
 Source12: welcome.conf
 Source13: manual.conf
-Source14: httpd.tmpfiles
 # Documentation
 Source31: httpd.mpm.xml
 Source33: README.confd
@@ -52,7 +51,7 @@ Requires(post): chkconfig
 Provides: webserver
 Provides: mod_dav = %{version}-%{release}, httpd-suexec = %{version}-%{release}
 Provides: httpd-mmn = %{mmn}, httpd-mmn = %{mmnisa}
-Requires: httpd-tools = %{version}-%{release}, apr-util-ldap, systemd-units
+Requires: httpd-tools = %{version}-%{release}, apr-util-ldap
 
 %description
 The Apache HTTP Server is a powerful, efficient, and extensible
@@ -242,11 +241,6 @@ install -m 644 -p $RPM_SOURCE_DIR/httpd.conf \
 mkdir $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig
 install -m 644 -p $RPM_SOURCE_DIR/httpd.sysconf \
    $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/httpd
-
-# tmpfiles.d configuration
-mkdir $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d 
-install -m 644 -p $RPM_SOURCE_DIR/httpd.tmpfiles \
-   $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/httpd.conf
 
 # for holding mod_dav lock database
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/dav
@@ -443,7 +437,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_sysconfdir}/httpd/conf.d/README
 
 %config(noreplace) %{_sysconfdir}/sysconfig/httpd
-%config %{_sysconfdir}/tmpfiles.d/httpd.conf
 
 %{_sbindir}/ht*
 %{_sbindir}/apachectl
